@@ -13,6 +13,7 @@ import PIL
 from sklearn import datasets,linear_model
 import cv2
 
+
 def rgb2gray(rgb):
     return np.dot(rgb[...,:3], [0.2989, 0.5870, 0.1140])
 
@@ -31,37 +32,44 @@ def imgWrapA(orgImg,a):
     imgWarpAffine = cv2.warpAffine(orgImg,M,(column,row))
     return imgWarpAffine
 
-def dpDdecode(img, row, column, side, orgImg):
-    thread=np.mean(img)
+
+def v3GetTrelis(img, row, column, side, orgImg):
+    inc=np.array(range(0-2,row-2))#2 = side
     reward= np.zeros((row,column),dtype=float)
     prev= np.zeros((row,column),dtype=float)
-    for j in range(0,row):  # for each reward
-        prev[j,0]=0;
-        if img[j,0] < thread :
-            reward[j,0]=0
-        else:
-            reward[j,0]=100
-
+    orgImgM= np.ones((row,column,side*2+1),dtype=float)*(-200)
     columnTrace=column
+    #columnTrace=4
+    
+    rewardM= np.ones((row,side*2+1),dtype=float)*(-1000)
+    colInx=0
+    orgImgM[1:  ,:,1]=orgImg[ :-1,:]+40.0
+    orgImgM[ :  ,:,2]=orgImg[ :  ,:]
+    orgImgM[ :-1,:,3]=orgImg[1:  ,:]+40.0
+    #for i in range(0, 2*side+1):
     for i in range(1, columnTrace):  # for each stage
-        for j in range(0,row):  # for each reward
-            if  orgImg[j,i]==0 : # white
-                reward[j,i] = reward[j,i-1]
-                prev[j,i] =j #debug of edge :0
-            else: #black
-                newReward=np.array(reward[:,i-1], copy=True)
-                down=max(j-side,0)
-                up=min(j+side,row)
-                for k in range(down,up):
-                    newReward[k]=newReward[k]+img[j,i]-abs(orgImg[j,i]-orgImg[k,i-1])
-                relativeMaxIndex=np.argmax(newReward[down:up])
-                maxreward=newReward[relativeMaxIndex+down]
-                reward[j,i] = maxreward
-                prev[j,i] = relativeMaxIndex+down
+        colInx=i-1
+        rewardM[1:  ,1]=reward[ :-1,colInx]
+        rewardM[ :  ,2]=reward[ :  ,colInx]
+        rewardM[ :-1,3]=reward[1:  ,colInx]
+        vNewReward=rewardM-abs(orgImgM[:,colInx,:]-orgImg[:,i, None])
+        vRelativeMaxIndex=np.argmax(vNewReward,axis=1)
+        reward[:,i]=np.max(vNewReward,axis=1)+img[:,i]
+        prev[:,i]=inc+vRelativeMaxIndex
 
+    return reward, prev
+
+
+def dpDdecode(img, row, column, side, orgImg):
+    #reward, prev=vvGetTrelis(img, row, column, side, orgImg)
+    reward, prev=v3GetTrelis(img, row, column, side, orgImg)
+    #reward, prev=vGetTrelis(img, row, column, side, orgImg)
+    #reward, prev=getTrelis(img, row, column, side, orgImg)
+    columnTrace=column
+    
     # traceback
-    rewardMax=np.max(reward[:,columnTrace-1])
-    rewardThread=rewardMax/2
+    #rewardMax=np.max(reward[:,columnTrace-1])
+    #rewardThread=rewardMax/2
     finalMaxIndex=np.argmax(reward[:,columnTrace-1])
     tmpIndex=finalMaxIndex
     data_r=np.zeros(columnTrace)
@@ -173,7 +181,7 @@ def lp_parser(path):
     cropGrayTD_masked5=np.multiply(cropGrayTD_masked4, gray_mask_t[0:-1,top+2:down+2]) 
     waveLR, a_t=dpDdecode(cropGrayTD_masked5,cropGrayTD_masked5.shape[0],cropGrayTD_masked5.shape[1],2, pix_gray_t[1:,top:down])
     imWrap_t_wrap=imgWrapA(imWrap_t,a_t)
-    imWrap_t_wrap_t = imWrap_t_wrap.copy().transpose(1,0,2)     
+    imWrap_t_wrap_t = imWrap_t_wrap.copy().transpose(1,0,2)   
     
     return waveLR,pix_gray[0:-1,left:right],a, imWrap, imWrap_t_wrap_t
 
