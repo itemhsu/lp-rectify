@@ -153,6 +153,11 @@ def dpDdecode(img, row, column, side, orgImg):
         data_r_max=data_r_x_up
     return data_r_max, a
 
+def rectScale(im):
+    myWidth = im.shape[0]
+    myHeight = int(myWidth/2)
+    nim = cv2.resize(im, (myWidth*2, myHeight*2), interpolation=cv2.INTER_AREA)
+    return nim
 
 def lp_parser(path):
     im = Image.open(path)
@@ -182,8 +187,9 @@ def lp_parser(path):
     waveLR, a_t=dpDdecode(cropGrayTD_masked5,cropGrayTD_masked5.shape[0],cropGrayTD_masked5.shape[1],2, pix_gray_t[1:,top:down])
     imWrap_t_wrap=imgWrapA(imWrap_t,a_t)
     imWrap_t_wrap_t = imWrap_t_wrap.copy().transpose(1,0,2)   
+    imWrap_t_wrap_t_scaled=rectScale(imWrap_t_wrap_t)
     
-    return waveLR,pix_gray[0:-1,left:right],a, imWrap, imWrap_t_wrap_t
+    return waveLR,pix_gray[0:-1,left:right],a, imWrap, imWrap_t_wrap_t, imWrap_t_wrap_t_scaled
 
 
 if __name__ == '__main__':
@@ -192,19 +198,21 @@ if __name__ == '__main__':
     pix_gray_s=[]
     imWrap_s=[]
     imWrap_t_wrap_t_s=[]
+    imWrap_t_wrap_t_scaled_s=[]
     for root,unkown,fNames in os.walk('img'):
         for f in fNames:
             strFpath="img/{}".format(f)
-            lpRect, pix_gray, a, imWrap, imWrap_t_wrap_t=lp_parser(strFpath)
+            lpRect, pix_gray, a, imWrap, imWrap_t_wrap_t, imWrap_t_wrap_t_scaled=lp_parser(strFpath)
             lpRect_s.append(lpRect)
             pix_gray_s.append(pix_gray)
             imWrap_s.append(imWrap)
             imWrap_t_wrap_t_s.append(imWrap_t_wrap_t)
+            imWrap_t_wrap_t_scaled_s.append(imWrap_t_wrap_t_scaled)
     
     
     plt.subplots(int(len(imWrap_s)/6)+1,6,figsize=(15,10))
     for ii in range(0,len(imWrap_t_wrap_t_s)):
         plt.subplot(int(len(imWrap_s)/6)+1,6,ii+1)
-        plt.imshow(imWrap_t_wrap_t_s[ii])
+        plt.imshow(imWrap_t_wrap_t_scaled_s[ii])
     plt.show()
     plt.savefig('test.png')
