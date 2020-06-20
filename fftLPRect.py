@@ -29,7 +29,7 @@ def rectScale(im):
     nim = cv2.resize(im, (myWidth*2, myHeight*2), interpolation=cv2.INTER_AREA)
     return nim
 
-def estCorrect(orgImg):
+def estCorrect(orgImg, cutoffF=0.8):
     pix_color = np.array(orgImg)
     img = rgb2gray(pix_color)
     f = np.fft.fft2(img)
@@ -43,7 +43,7 @@ def estCorrect(orgImg):
     size=min(img.shape)
     polar_img = cv2.warpPolar(magnitude_spectrum, (int(size/2), 200), (img.shape[1]/2,img.shape[0]/2), 
                                   size*margin*0.5, cv2.WARP_POLAR_LINEAR)
-    cutoffF=0.99
+    
     polar_img_lowF=polar_img[:,0:int(cutoffF*polar_img.shape[1])]
     
     polar_sum_200=np.sum(polar_img_lowF,axis=1)
@@ -55,18 +55,18 @@ def estCorrect(orgImg):
     correctImg=imgWrapA(pix_color,aEst)
     return correctImg
 
-def estCorrect2D(orgImg):
-    hCorrectedImg=estCorrect(orgImg)
+def estCorrect2D(orgImg, cutoffF=0.8):
+    hCorrectedImg=estCorrect(orgImg, cutoffF)
     hCorrectedImg90=np.rot90(hCorrectedImg)
-    vCorrectedImg=estCorrect(hCorrectedImg90)
+    vCorrectedImg=estCorrect(hCorrectedImg90, cutoffF)
     vCorrectedImg270=np.rot90(vCorrectedImg,  k=3)
     return hCorrectedImg, vCorrectedImg270
 
 
-def estCorrect2D_scale(strFpath):
+def estCorrect2D_scale(strFpath, cutoffF=0.8):
     orgImg = cv2.imread(strFpath)
     pix_color = np.array(orgImg)
-    hCorrectedImg, vCorrectedImg270=estCorrect2D(pix_color)
+    hCorrectedImg, vCorrectedImg270=estCorrect2D(pix_color, cutoffF)
     imWrap_t_wrap_t_scaled=rectScale(vCorrectedImg270)
     return hCorrectedImg, vCorrectedImg270, imWrap_t_wrap_t_scaled
     
@@ -76,10 +76,11 @@ if __name__ == '__main__':
     imWrap_s=[]
     imWrap_t_wrap_t_s=[]
     imWrap_t_wrap_t_scaled_s=[]
-    for root,unkown,fNames in os.walk('img'):
+    cutoffF=0.8
+    for root,unkown,fNames in os.walk('img3'):
         for f in fNames:
-            strFpath="img/{}".format(f)
-            hCorrectedImg, vCorrectedImg270, imWrap_t_wrap_t_scaled=estCorrect2D_scale(strFpath)
+            strFpath="img3/{}".format(f)
+            hCorrectedImg, vCorrectedImg270, imWrap_t_wrap_t_scaled=estCorrect2D_scale(strFpath, cutoffF)
             imWrap_s.append(hCorrectedImg)
             imWrap_t_wrap_t_s.append(vCorrectedImg270)
             imWrap_t_wrap_t_scaled_s.append(imWrap_t_wrap_t_scaled)
