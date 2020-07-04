@@ -32,7 +32,8 @@ def rectScale(im):
     nim = cv2.resize(im, (myWidth*2, myHeight*2), interpolation=cv2.INTER_AREA)
     return nim
 
-def estCorrect(orgImg, cutoffF=0.8, margin=0.1):
+def estCorrect(orgImg0, cutoffF=0.8, margin=0.1):
+    orgImg = cv2.fastNlMeansDenoisingColored(orgImg0,None,9,9,7,21)
     w=orgImg.shape[1]
     crop_img = orgImg[:, int(margin*w):int(w-margin*w)]
     pix_color = np.array(crop_img)
@@ -52,7 +53,7 @@ def estCorrect(orgImg, cutoffF=0.8, margin=0.1):
     polar_img = cv2.warpPolar(magnitude_spectrum, (int(size/2), 200), (img.shape[1]/2,img.shape[0]/2), 
                                   size*margin*0.5, cv2.WARP_POLAR_LINEAR)
    
-    polar_img_lowF=polar_img[:,int(0.2*polar_img.shape[1]):int(cutoffF*polar_img.shape[1])]
+    polar_img_lowF=polar_img[:,int(0.01*polar_img.shape[1]):int(cutoffF*polar_img.shape[1])]
     
     polar_sum_200=np.sum(polar_img_lowF,axis=1)
     polar_sum=polar_sum_200[0:100]+polar_sum_200[100:200]
@@ -61,8 +62,8 @@ def estCorrect(orgImg, cutoffF=0.8, margin=0.1):
     maxIndex=np.argmax(polar_sum[25:75])+25
     offsetDegree=(maxIndex-50)/100*3.14
     aEst=np.sin(offsetDegree)
-    #correctImg=imgWrapA(pix_color,aEst)
-    correctImg=imgWrapA(full_pix_color,aEst)
+    full_pix_color0 = np.array(orgImg0)
+    correctImg=imgWrapA(full_pix_color0,aEst)
     #full_pix_color
     #polar_sum[25:75]=min(polar_sum) #matthew  do not count center line
     #maxIndex2=np.argmax(polar_sum)
@@ -95,11 +96,12 @@ if __name__ == '__main__':
     imWrap_t_wrap_t_scaled_s=[]
     cutoffF=0.8
     margin=0.1
-    dirs={'img','img3', 'img4'}
+    dirs={'img','img3', 'img4', 'img5'}
     for fDir in dirs:
         for root,unkown,fNames in os.walk(fDir):
             for f in fNames:
                 strFpath="{}/{}".format(fDir,f)
+                print(strFpath)
                 hCorrectedImg, vCorrectedImg270, imWrap_t_wrap_t_scaled=estCorrect2D_scale(strFpath, cutoffF, margin)
                 imWrap_s.append(hCorrectedImg)
                 imWrap_t_wrap_t_s.append(vCorrectedImg270)
